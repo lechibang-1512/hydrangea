@@ -3,16 +3,24 @@ const { spawnSync } = require("node:child_process");
 function isMdmMacOS() {
 	let enrolled = true; // let's assume we're managed and correct ourselves if we prove we're not
 
-	const command = spawnSync("/usr/bin/profiles", [
-		"status",
-		"-type",
-		"enrollment",
-	]).stdout.toString();
+	try {
+		const result = spawnSync("/usr/bin/profiles", [
+			"status",
+			"-type",
+			"enrollment",
+		]);
 
-	if (
-		command.includes("Enrolled via DEP: No") &&
-		command.includes("MDM enrollment: No")
-	) {
+		if (!result.stdout) return false;
+
+		const command = result.stdout.toString();
+
+		if (
+			command.includes("Enrolled via DEP: No") &&
+			command.includes("MDM enrollment: No")
+		) {
+			enrolled = false;
+		}
+	} catch (e) {
 		enrolled = false;
 	}
 
@@ -22,9 +30,17 @@ function isMdmMacOS() {
 function isMdmWindows() {
 	let enrolled = true; // let's assume we're managed and correct ourselves if we prove we're not
 
-	const command = spawnSync("dsregcmd", ["/status"]).stdout.toString();
+	try {
+		const result = spawnSync("dsregcmd", ["/status"]);
 
-	if (!command.includes("MdmUrl")) {
+		if (!result.stdout) return false;
+
+		const command = result.stdout.toString();
+
+		if (!command.includes("MdmUrl")) {
+			enrolled = false;
+		}
+	} catch (e) {
 		enrolled = false;
 	}
 
@@ -39,6 +55,8 @@ function isMdm() {
 	if (process.platform === "win32") {
 		return isMdmWindows();
 	}
+
+	return false;
 }
 
 module.exports = isMdm;
